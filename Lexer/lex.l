@@ -11,7 +11,7 @@ struct node{
 };
 
 struct node* head;
-
+int line = 1;
 void insert(char* arr,char* arr1);
 
 %} 
@@ -37,11 +37,12 @@ const|float|native|super|while	{insert(yytext,"Keyword");}
 
 [1-9][0-9]*|true|false|0|null  {insert(yytext,"Literal");}
 
-[a-zA-Z]* {insert(yytext,"Identifier");}
+[a-zA-Z][a-zA-Z1-9_]* {insert(yytext,"Identifier");}
 
 
-[ \t\n] ;
-. ;
+[ \t] ;
+\n line++;
+. printf("Line No.:%d: %s is an illegal character\n",line,yytext);
 %% 
 
 
