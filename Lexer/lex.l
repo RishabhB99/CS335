@@ -4,7 +4,7 @@
 #include <string.h>
 
 struct node{
-	char lexeme[1000];
+	char lexeme[64000];
 	char token[100];
 	int count;
 	struct node* next;
@@ -12,10 +12,15 @@ struct node{
 
 struct node* head;
 int line = 1;
+int FLAG = 0;
 void insert(char* arr,char* arr1);
-
+void enter(char* arr);
 %} 
-  
+
+com [^*]|"*"[^/]
+Digits [0-9]|[0-9][0-9_]*[0-9]
+Hex [0-9a-fA-F]|[0-9a-fA-F][0-9a-fA-F_]*[0-9a-fA-F]
+
 %%
 abstract|continue|for|new|switch {insert(yytext,"Keyword");}
 assert|default|if|package|synchronized {insert(yytext,"Keyword");}
@@ -35,17 +40,41 @@ const|float|native|super|while	{insert(yytext,"Keyword");}
 "+"|"-"|"*"|"/"|"&"|"|"|"^"|"%"|"<<"|">>"|">>>=" {insert(yytext,"Operator");}
 "+="|"-="|"*="|"/="|"&="|"|="|"^="|"%="|"<<="|">>=" {insert(yytext,"Operator");}
 
-[1-9][0-9]*|true|false|0|null  {insert(yytext,"Literal");}
+0[0-9_]*[8-9][0-9_]*       {printf("Error:Line No.:%d: %s is an invalid number\n",line,yytext);FLAG=1;}  					
+{Digits}|true|false|null|0(b|B)[0-1]|0(b|B)[0-1][0-1_]*[0-1]  {insert(yytext,"Literal");}
+0(x|X){Hex} {insert(yytext,"Literal");}
 
-[a-zA-Z][a-zA-Z1-9_]* {insert(yytext,"Identifier");}
+[0-9]*"."{Digits}|{Digits}"."[0-9]*|[0-9]*"."{Digits}[eE][-+]?{Digits} {insert(yytext,"Literal");}
+{Digits}"."[0-9]*[eE][-+]?{Digits}|[0-9]*"."{Digits}[eE][-+]?{Digits}[fdFD]  {insert(yytext,"Literal");}
+{Digits}"."[0-9]*[eE][-+]?{Digits}[fdFD]|{Digits}[eE][-+]?{Digits}[fdFD]  {insert(yytext,"Literal");}
+{Digits}[eE][-+]?{Digits}|{Digits}[fdFD]                                       {insert(yytext,"Literal");}
+0(x|X){Hex}"."{Hex}[pP][-+]?{Digits}|0(x|X){Hex}"."{Hex}[pP][-+]?{Digits}[fdFD] {insert(yytext,"Literal");}
 
+[a-zA-Z][a-zA-Z0-9_]* {insert(yytext,"Identifier");}
+
+"\""([^\\\"\']|\\\"|\\\'|\\\\|\\b|\\t|\\n|\\r|\\f|\\[0-7]|\\[0-7]|\\[0-7][0-7]|\\[0-3][0-7][0-7])*"\""  {insert(yytext,"Literal");}
+
+"\'"([^\\\"\']|\\\"|\\\'|\\\\|\\b|\\t|\\n|\\r|\\f|\\[0-7]|\\[0-7]|\\[0-7][0-7]|\\[0-3][0-7][0-7])"\'"  {insert(yytext,"Literal");}
+
+
+"/""*"+{com}*+"*""/"    {enter(yytext);}
+
+
+
+"/""/"[^\n]*    ;
 
 [ \t] ;
 \n line++;
-. printf("Line No.:%d: %s is an illegal character\n",line,yytext);
+. {printf("Error:Line No.:%d: %s is an illegal character\n",line,yytext);FLAG = 1;}
 %% 
 
-
+void enter(char* arr){
+	while(*arr!=0){
+		if(*arr=='\n')
+			line++;
+		arr+=1;
+	}
+}
 void insert(char* arr,char* arr1){
 	if(head==NULL)
 	{
@@ -81,15 +110,12 @@ int main(int argc, char *argv[]){
   
 	yyin = fopen(argv[1], "r");
 	yylex();
-	printf("-------------------------------------\n");
-	printf("%s\t\t%s\t\t%s\n","Lexeme","Token","Count");
-	printf("-------------------------------------\n");
+ 	if(FLAG)
+	return 0;
+	printf("%s,%s,%s\n","Lexeme","Token","Count");
 	while(head!=NULL)
 	{
-		if(!strcmp(head->token,"Keyword")||!strcmp(head->token,"Literal"))
-			printf("%s\t\t%s\t\t%d\n",head->lexeme,head->token,head->count);
-		else	
-			printf("%s\t\t%s\t%d\n",head->lexeme,head->token,head->count);
+		printf("%s,%s,%d\n",head->lexeme,head->token,head->count);
 		head = head->next;
 	}
 	fclose(yyin);
